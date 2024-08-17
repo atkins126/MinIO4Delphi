@@ -91,8 +91,13 @@ function TMinIOStorageService.PrepareRequest(const HTTPVerb: string; Headers,
   var Content: TStream): TCloudHTTP;
 begin
   URL := TMinIOConnectionInfo(GetConnectionInfo).StorageURL(QueryPrefix.Replace('/', '', []));
+
   if URL.Contains('?') and (not URL.EndsWith('?') and not URL.Contains('=')) then //?uploads
     URL := URL + '=';
+
+  if Assigned(QueryParameters) then
+    URL := BuildQueryParameterString(url, QueryParameters, False, True);
+
   Headers.Values['host'] := GetConnectionInfo.StorageEndpoint;
   Result := inherited;
 end;
@@ -160,6 +165,7 @@ begin
     LResponseInfo := TCloudResponseInfo.Create;
     try
       LUploadId := InitiateMultipartUpload(ABucketName, ARemoteFileName, nil, nil, amzbaPrivate, LResponseInfo);
+      TestMultipartUpload(not LUploadId.IsEmpty(), LResponseInfo);
       try
         LBinaryReader := TBinaryReader.Create(AFileName);
         try
@@ -171,7 +177,7 @@ begin
                 ABucketName,
                 ARemoteFileName,
                 LUploadId,
-                LParts.Count,
+                Succ(LParts.Count),
                 LChunk,
                 LPart),
               LResponseInfo);
@@ -191,7 +197,7 @@ begin
       LResponseInfo.Free;
     end;
   finally
-   LParts.Free;
+    LParts.Free;
   end;
 end;
 
